@@ -1,15 +1,16 @@
-import { FunctionComponent, useEffect } from "react"
-import { loginUrl } from "./LoginButton"
+import { FunctionComponent } from "react"
+import LoginButton from "./LoginButton"
 
 type Props = {
     // none
 }
 
 const LogInPage: FunctionComponent<Props> = () => {
-    useEffect(() => {
-        window.open(loginUrl, '_self')
-    }, [])
-    return <div>Logging in...</div>
+    return (
+        <div style={{padding: 30}}>
+            <LoginButton />
+        </div>
+    )
 }
 
 export default LogInPage
