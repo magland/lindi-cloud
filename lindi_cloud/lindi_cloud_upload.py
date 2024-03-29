@@ -131,8 +131,8 @@ def _get_signed_upload_url(url: str, github_access_token: str) -> str:
     headers = {
         'Authorization': f'token {github_access_token}'
     }
-    # api_url = 'http://localhost:3000/api/getUploadUrl'
-    api_url = 'https://lindi-cloud.vercel.app/api/getUploadUrl'
+    api_url = 'http://localhost:3000/api/getUploadUrl'
+    # api_url = 'https://lindi-cloud.vercel.app/api/getUploadUrl'
     resp = requests.post(api_url, headers=headers, json={
         "type": "getUploadUrl",
         "url": url

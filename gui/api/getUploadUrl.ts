@@ -111,7 +111,7 @@ export default allowCors(async (req, res) => {
   res.status(200).json({ signedUrl });
 });
 
-const bucket: Bucket = {
+export const bucket: Bucket = {
   uri: "r2://neurosift-lindi",
   credentials: BUCKET_CREDENTIALS,
 }
