@@ -89,11 +89,9 @@ class DirectoryLister {
     constructor(private dispatch: React.Dispatch<FileBrowserAction>) {
     }
     async fetchDirectory(folderPath: string) {
-        console.log('---fetching directory', folderPath)
         if (this.#fetchedDirectories.includes(folderPath)) return
         this.#fetchedDirectories.push(folderPath)
         const {files, dirNames} = await doFetchDirectory(folderPath)
-        console.log('-------------------', files, dirNames)
         const fileString: 'file' | 'folder' = 'file'
         const folderString: 'file' | 'folder' = 'folder'
         this.dispatch({

@@ -52,7 +52,7 @@ type FileBrowserTableProps = {
 
 const colWidth = 15
 
-const initialExpandedFoldersJson = localStorage.getItem('expandedFolders')
+const initialExpandedFoldersJson = localStorage.getItem('lindi-cloud-expanded-folders')
 let initialExpandedFolders: Set<string>
 try {
     initialExpandedFolders = new Set(JSON.parse(initialExpandedFoldersJson || '[]'))
@@ -61,7 +61,6 @@ catch (err) {
     if (initialExpandedFoldersJson) console.error('Error parsing expanded folders from local storage:', err)
     initialExpandedFolders = new Set<string>()
 }
-console.log('initialExpandedFolders', initialExpandedFolders)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const FileBrowserTable: FunctionComponent<FileBrowserTableProps> = ({hideSizeColumn, hideModifiedColumn, files, selectedFileNames, selectedFileNamesDispatch, onOpenFile, multiSelect, onRetrieveFolder}) => {
@@ -74,14 +73,13 @@ const FileBrowserTable: FunctionComponent<FileBrowserTableProps> = ({hideSizeCol
                 newExpandedFolders.add(f)
             }
         }
-        localStorage.setItem('expandedFolders', JSON.stringify(Array.from(newExpandedFolders)))
+        localStorage.setItem('lindi-cloud-expanded-folders', JSON.stringify(Array.from(newExpandedFolders)))
     }, [expandedFolders, files])
     useEffect(() => {
         for (const f of initialExpandedFolders) {
             onRetrieveFolder(f)
         }
     }, [onRetrieveFolder])
-    console.log('---- a', expandedFolders)
     const itemIsVisible = useMemo(() => ((path: string) => {
         if (!path) return false
         const aa = path.split('/')
@@ -119,7 +117,6 @@ const FileBrowserTable: FunctionComponent<FileBrowserTableProps> = ({hideSizeCol
 
     const rootNode = useMemo(() => {
         const defineSubnodesForNode = (node: TreeNode) => {
-            console.log('---- define subnodes for node', node.name)
             if (node.type === 'folder') {
                 const subFoldersSet = new Set<string>()
                 for (const ff of files || []) {
@@ -174,7 +171,6 @@ const FileBrowserTable: FunctionComponent<FileBrowserTableProps> = ({hideSizeCol
     // IMPORTANT not to initialize the expanded state here, because then the root node will get redefined every time new files come in as props
     // useEffect(() => {
     //     // initialize expanded state
-    //     console.log('------------------ initializing expanded state')
     //     const newExpandedFolders = new Set<string>()
     //     const handleNode = (node: TreeNode) => {
     //         if (node.type === 'folder') {
@@ -223,8 +219,6 @@ const FileBrowserTable: FunctionComponent<FileBrowserTableProps> = ({hideSizeCol
         handleNode(rootNode)
         return ret
     }, [rootNode])
-
-    console.log('--- fileItems', fileItems)
 
     const handleClickFile = useCallback((fileName: string) => {
         onOpenFile(fileName)
