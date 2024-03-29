@@ -13,7 +13,7 @@ Important features
 * You are always working with a relatively small reference file system objects (the .zarr.json files).
 * When you add large datasets to the file, they get temporarily stored as chunks in a staging area on the local machine, with references in the in-memory .zarr.json object.
 * When you upload the new file, the data chunks first get consolidated. For example, 100 chunk files of size 5 MB each will be consolidated into a single 500 MB file before uploading to the cloud. This can drastically reduce the number of files that need to be uploaded and stored in the cloud bucket.
-* During upload, the binary data chunk files are stored in the cloud according to their SHA-1 content hashes. This means that you never need to re-upload chunks that have already been stored on the LINDI cloud.
+* During upload, the binary data chunk files are stored in the cloud according to their SHA-1 content hashes. This means that you never need to re-upload chunks that have already been stored on the LINDI cloud (within the same zone, see below).
 
 ## Example: Augmenting a DANDI NWB file
 
