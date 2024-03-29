@@ -1,4 +1,5 @@
 import time
+import uuid
 import numpy as np
 import lindi_cloud
 import h5py
@@ -59,6 +60,10 @@ def example_add_autocorrelograms():
     # Create a new dataset in the units group to store the autocorrelograms
     ds = units_group.create_dataset('autocorrelogram', data=autocorrelograms_array)
     ds.attrs['bin_edges_sec'] = auto_correlograms[0]['bin_edges_sec'].tolist()
+    ds.attrs['description'] = 'the autocorrelogram for each spike unit'
+    ds.attrs['namespace'] = 'hdmf-common'
+    ds.attrs['neurodata_type'] = 'VectorData'
+    ds.attrs['object_id'] = str(uuid.uuid4())
 
     # Update the colnames attribute of the units group
     colnames = units_group.attrs['colnames']
