@@ -1,3 +1,4 @@
+from typing import Union
 import tempfile
 import json
 import os
@@ -9,21 +10,26 @@ from .LindiCloudStore import LindiCloudStore
 def lindi_cloud_upload(
     client: lindi.LindiH5pyFile,
     url: str,
-    consolidate_chunks: bool = True
+    consolidate_chunks: bool = True,
+    use_kachery: bool = False
 ):
-    if not url.startswith('https://lindi.neurosift.org/zones/'):
-        raise ValueError("url must start with 'https://lindi.neurosift.org/zones/'")
-    url_parts = url.split('/')
-    if len(url_parts) < 8:
-        raise ValueError("Invalid url")
-    zone_user = url_parts[4]
-    zone_name = url_parts[5]
-    aa = url_parts[6]
-    if aa != 'f':
-        raise Exception(f'url expected to start with https://lindi.neurosift.org/zones/{zone_user}/{zone_name}/f')
-    base_zone_url = f'https://lindi.neurosift.org/zones/{zone_user}/{zone_name}'
-    # make sure github access token is available
-    github_access_token = _get_github_access_token()
+    if not use_kachery:
+        if not url.startswith('https://lindi.neurosift.org/zones/'):
+            raise ValueError("url must start with 'https://lindi.neurosift.org/zones/'")
+        url_parts = url.split('/')
+        if len(url_parts) < 8:
+            raise ValueError("Invalid url")
+        zone_user = url_parts[4]
+        zone_name = url_parts[5]
+        aa = url_parts[6]
+        if aa != 'f':
+            raise Exception(f'url expected to start with https://lindi.neurosift.org/zones/{zone_user}/{zone_name}/f')
+        base_zone_url = f'https://lindi.neurosift.org/zones/{zone_user}/{zone_name}'
+        # make sure github access token is available
+        github_access_token = _get_github_access_token()
+    else:
+        base_zone_url = None
+        github_access_token = None
     store = client._zarr_store
     if not isinstance(store, LindiCloudStore):
         raise ValueError("The zarr store for this client is not a LindiCloudStore")
@@ -33,7 +39,7 @@ def lindi_cloud_upload(
     if staging_subdir is not None:
         staging_subdir_is_empty = not os.path.exists(staging_subdir) or len(os.listdir(staging_subdir)) == 0
         if not staging_subdir_is_empty:
-            blob_mapping = _upload_directory_of_blobs(staging_subdir, base_zone_url=base_zone_url, github_access_token=github_access_token)
+            blob_mapping = _upload_directory_of_blobs(staging_subdir, base_zone_url=base_zone_url, github_access_token=github_access_token, use_kachery=use_kachery)
             for k, v in store._rfs['refs'].items():
                 if isinstance(v, list) and len(v) == 3:
                     url1 = v[0]
@@ -42,12 +48,19 @@ def lindi_cloud_upload(
                         if url2 is None:
                             raise ValueError(f"Could not find url in blob mapping: {url1}")
                         store._rfs['refs'][k][0] = url2
-    with tempfile.TemporaryDirectory() as tmpdir:
-        rfs_fname = f'{tmpdir}/rfs.json'
-        with open(rfs_fname, "w") as f:
+    if url.startswith('http://') or url.startswith('https://'):
+        if use_kachery:
+            raise ValueError("Cannot upload to http or https url when use_kachery is True")
+        assert github_access_token is not None
+        with tempfile.TemporaryDirectory() as tmpdir:
+            rfs_fname = f'{tmpdir}/rfs.json'
+            with open(rfs_fname, "w") as f:
+                json.dump(store._rfs, f, indent=2, sort_keys=True)
+            print(f'Uploading to {url}')
+            _upload_file(fname=rfs_fname, url=url, github_access_token=github_access_token)
+    else:
+        with open(url, "w") as f:
             json.dump(store._rfs, f, indent=2, sort_keys=True)
-        print(f'Uploading to {url}')
-        _upload_file(fname=rfs_fname, url=url, github_access_token=github_access_token)
     print('Done')
 
 
@@ -86,7 +99,17 @@ def _check_file_exists_with_head_request(url: str) -> bool:
         raise Exception(f"Problem checking if file exists: {resp.text}")
 
 
-def _upload_directory_of_blobs(staging_dir: str, base_zone_url: str, github_access_token: str) -> dict:
+def _upload_directory_of_blobs(
+    staging_dir: str,
+    base_zone_url: Union[str, None],
+    github_access_token: Union[str, None],
+    use_kachery: bool = False
+) -> dict:
+    if not use_kachery:
+        if base_zone_url is None:
+            raise ValueError('base_zone_url must be provided when not using kachery')
+        if github_access_token is None:
+            raise ValueError('github_access_token must be provided when not using kachery')
     all_files = []
     for root, dirs, files in os.walk(staging_dir):
         for fname in files:
@@ -97,10 +120,22 @@ def _upload_directory_of_blobs(staging_dir: str, base_zone_url: str, github_acce
         relative_fname = full_fname[len(staging_dir):]
         size_bytes = os.path.getsize(full_fname)
         print(f'Uploading blob {i + 1} of {len(all_files)} {relative_fname} ({_format_size_bytes(size_bytes)})')
-        sh = _compute_sha1_of_file(full_fname)
-        blob_url = f"{base_zone_url}/sha1/{sh[0]}{sh[1]}/{sh[2]}{sh[3]}/{sh[4]}{sh[5]}/{sh}"
-        _upload_file(fname=full_fname, url=blob_url, github_access_token=github_access_token, skip_if_exists=True)
-        blob_mapping[full_fname] = blob_url
+        if not use_kachery:
+            assert base_zone_url is not None
+            assert github_access_token is not None
+            sh = _compute_sha1_of_file(full_fname)
+            blob_url = f"{base_zone_url}/sha1/{sh[0]}{sh[1]}/{sh[2]}{sh[3]}/{sh[4]}{sh[5]}/{sh}"
+            _upload_file(
+                fname=full_fname,
+                url=blob_url,
+                github_access_token=github_access_token,
+                skip_if_exists=True
+            )
+            blob_mapping[full_fname] = blob_url
+        else:
+            import kachery_cloud as kcl
+            uri = kcl.store_file(full_fname)
+            blob_mapping[full_fname] = uri
     return blob_mapping
 
 
