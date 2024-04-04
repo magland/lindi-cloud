@@ -104,9 +104,12 @@ class LindiCloudStore(ZarrStore):
             ]
             if len(files) <= 1:
                 continue
-            refs_keys_for_this_dir = refs_keys_by_reference_parent_path.get(root, [])
+            parent_path = root[len(self._staging_subdir):]
+            refs_keys_for_this_dir = refs_keys_by_reference_parent_path.get(parent_path, [])
             if len(refs_keys_for_this_dir) <= 1:
                 continue
+
+            print(f'Consolidating chunks in {root}: {files}')
 
             offset = 0
             offset_maps = {}
